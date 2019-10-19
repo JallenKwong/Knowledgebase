@@ -8,7 +8,7 @@
 
 [3.Why two types?](#why-two-types?)
 
-[4.Should we make our exceptions checked or unchecked?](#should-we-make-our-exceptions-checked-or-unchecked?)
+[4.Should we make our exceptions checked or unchecked?](#should-we-make-our-exceptions-checked-or-unchecked)
 
 In Java, there are two types of exceptions:
 

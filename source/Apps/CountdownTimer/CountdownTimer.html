@@ -1,0 +1,234 @@
+---
+layout: false
+---
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+		<title>Countdown Timer</title>
+		<style type="text/css">
+			input{
+			    padding-bottom: 0px;
+				padding-top: 0px;
+				border-top-width: 0px;
+				border-left-width: 0px;
+				border-right-width: 0px;
+				font-size: 20px;
+				width:100%;
+			}
+		</style>
+	</head>
+	
+	<body>
+		<span id="numbers" style="white-space:nowrap;"></span>
+		
+		<table id="table1" >
+			<tr>
+				<td style="background-color:rgb(41, 74, 155);padding:3px;"></td>
+				<td></td>
+			</tr>
+			<tr>
+				<td style="width:100%;" colspan=2>
+					<input id="content"/>
+				</td>
+			</tr>
+		</table>
+		
+		<audio id='music'>
+		  <source src="music/Windows XP 启动.wav" type="audio/mpeg">
+		  Your browser does not support the audio tag.
+		</audio>
+		
+		<audio id='music2'>
+		  <source src="music/Windows XP 关机.wav" type="audio/mpeg">
+		  Your browser does not support the audio tag.
+		</audio>
+		
+		<script type="text/javascript" >
+
+			var timer = {
+				initMinutes:30,
+				restSeconds:0,
+				minute:0,
+				second:0,
+				handle:0,
+				stopFlag:false,
+				startTime:0,
+				content:"asdasd",
+				coverFlag:false,
+				setFontSize:function(){
+					document.getElementById("numbers").style.fontSize = (window.innerWidth
+								|| document.documentElement.clientWidth
+								|| document.body.clientWidth) / 3 + "px"
+				},
+				refreshTable:function(){
+					//进度条
+					var table = document.getElementById("table1")
+					var span = document.getElementById('numbers')
+					
+					//刷新进度条
+					//table2.style.width = 
+					table.style.width = span.offsetWidth + "px"
+
+					var progress = 1
+					
+					if(this.restSeconds > 0)
+						progress = this.restSeconds / (this.initMinutes * 60)
+					
+					document.querySelector('#table1 td:nth-of-type(1)').style.width = progress * 100 + "%"
+					
+					var td2 = document.querySelector('#table1 td:nth-of-type(2)')
+					
+					if (progress < 1){
+						td2.style.width = (1 - progress) * 100 + "%"
+					}else{
+						td2.style.display = "none"
+					}
+					
+				},
+				init:function(){
+					this.startTime = Date.now()
+					var span = document.getElementById('numbers')
+					this.setFontSize()
+					
+					this.restSeconds = this.initMinutes * 60 
+					this.minute = this.initMinutes
+					
+					var obj = this
+					
+					this.handle = setInterval(function(){
+						
+						if(obj.stopFlag)
+							return
+						
+						if(obj.restSeconds > 0){
+							span.innerHTML = "" + (obj.minute < 10 ? "0" + obj.minute : obj.minute) + ":" + 
+							(!obj.coverFlag ? (obj.second < 10 ? "0" + obj.second : obj.second) : "&nbsp;".repeat(4))
+							
+							if(obj.restSeconds > 0){
+								obj.restSeconds -= 1
+							}
+							
+							obj.minute =  Math.floor(obj.restSeconds / 60)
+							obj.second =  obj.restSeconds - obj.minute * 60
+							
+							//刷新进度条
+							obj.refreshTable()
+							
+						}else{
+							span.innerHTML = "Time "
+							window.clearInterval(obj.handle)
+							document.getElementById("music2").play()
+							
+							//跑完后记录
+							var content = document.getElementById("content").value
+							obj.markdownRecord(content)
+							
+							//不停地闪烁
+							window.setInterval(function(){
+								span.innerHTML = (span.innerHTML == "Time ")?"is up.":"Time "
+							}, 2000)
+						}
+						
+					}, 1000)
+					
+					document.getElementById("music").play()
+					
+					var numbers = document.getElementById("numbers")
+					
+					numbers.addEventListener("click", function(){
+						obj.coverFlag = !obj.coverFlag
+					})
+
+					numbers.addEventListener("dblclick", function(){
+						obj.stopFlag = !obj.stopFlag
+					})
+
+					document.getElementById('content').addEventListener("blur", function(){
+
+						if(obj.restSeconds > 0)
+							return
+						
+						var content = document.getElementById("content").value
+						
+						if(this.content != content){
+							this.content = content
+							obj.markdownRecord(content)
+						}
+					})
+					
+					document.getElementById('table1').addEventListener("dblclick", function(){
+						console.log("timerHistory:")
+						console.log(localStorage.getItem('timerHistory'))
+						console.log("\n")
+						obj.exportHistory()
+					})
+
+				},
+				markdownRecord:function(content){
+					var records = []
+					var timerHistory = localStorage.getItem("timerHistory")
+					
+					if(timerHistory != null){
+						records = JSON.parse(timerHistory)
+					}
+					
+					var lastRecord = records[0]
+					
+					if(lastRecord && lastRecord.start == this.startTime){
+						lastRecord.note = content
+					}else{
+						var history = {
+							start:this.startTime,
+							duration:this.initMinutes,
+							note:content
+						}
+						records.unshift(history)//数组头插入元素			
+					}
+					
+					var recordsJson = JSON.stringify(records)
+					
+					//将结果存入本地
+					localStorage.setItem("timerHistory", recordsJson)
+					
+					console.log(records[0])
+					console.log("Marked it Down.")
+					
+				},
+				exportHistory:function(){
+
+					var filename = 'record' + Date.now() +'.txt'
+					var text = localStorage.getItem('timerHistory')
+					this.exportFile(filename, text)
+				},
+				exportFile:function(filename, text){
+					var element = document.createElement('a');
+					element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+					element.setAttribute('download', filename);
+
+					element.style.display = 'none';
+					document.body.appendChild(element);
+
+					element.click();
+
+					document.body.removeChild(element);
+				}
+			}
+
+			window.onresize = function(){
+				timer.setFontSize()
+				timer.refreshTable()
+			}
+			
+			//pause
+			window.onclick = function(){
+				//timer.stopFlag = !timer.stopFlag
+			}
+			
+			//main
+			window.onload = function(){
+				timer.init()
+			}
+		</script>
+	</body>
+</html> 
